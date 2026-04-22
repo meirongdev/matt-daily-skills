@@ -1,6 +1,6 @@
 {
   "name": "matt-daily-skills",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Canonical multi-agent skill library installable via npx for Claude Code, GitHub Copilot, Qwen Code, and Codex.",
   "bin": {
     "matt-daily-skills": "./bin/cli.js",

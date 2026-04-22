@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "agents": {
+    "claude": { "enabled": true },
+    "qwen": { "enabled": true },
+    "copilot": { "enabled": true, "mode": "skill-and-prompt" },
+    "codex": { "enabled": true, "mode": "agents-and-prompts" }
+  }
+}
