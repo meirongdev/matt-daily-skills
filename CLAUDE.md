@@ -6,18 +6,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A personal library of Claude **skills** distributed via `npx`, now being generalized to multi-agent (Claude Code, GitHub Copilot, Qwen Code, Codex). One canonical source per skill under `skills/<name>/`; the CLI renders per-agent install outputs at install time. Zero runtime dependencies (Node built-ins only), Node >=22.
 
-## Current state: mid-migration — read this first
+## Current state
 
-The package layout is normalized (`bin/`, `lib/`, `templates/`, `package.json#bin` all match), but the CLI itself and the canonical `skills/` tree are not implemented yet.
+Package layout, CLI, renderers, and tests are all implemented. `npm test` runs 25 tests. The sample skill `ecommerce-entry-review` is migrated under `skills/`. The legacy `mnt/` tree is gone.
 
-- `bin/cli.js` is a thin bootstrap that calls `lib/cli.js`.
-- `lib/cli.js` is a stub: `run()` prints `"matt-daily-skills CLI is not implemented yet."` So `npm run list`, `npm run install-all`, and every `node bin/cli.js …` invocation currently no-op.
-- `skills/` does not exist at the repo root. The only existing skill content lives at `mnt/user-data/outputs/my-skills/skills/ecommerce-entry-review/SKILL.md` (legacy path). Task 2 of the plan migrates it.
-- `tests/` does not exist yet, even though `package.json#scripts.test` is `node --test tests/*.test.js`. Running `npm test` today errors.
+- `bin/cli.js` is the package entry; calls `lib/cli.js`.
+- `lib/cli.js` owns `list`, `install`, `new` dispatch plus arg parsing and install orchestration.
+- `lib/{discover,frontmatter,manifest,paths,install,fs-utils}.js` are the shared building blocks. `lib/renderers/{claude,copilot,codex}.js` do per-agent rendering (Qwen reuses the Claude renderer).
 
-The design spec is at `docs/superpowers/specs/2026-04-22-multi-agent-skill-distribution-design.md`. The task-by-task plan (with code blocks to paste) is at `docs/superpowers/plans/2026-04-22-multi-agent-skill-distribution.md` — it's the source of truth for what the CLI, renderers, manifest schema, and tests should look like. Follow it rather than improvising when implementing.
+The design spec is at `docs/superpowers/specs/2026-04-22-multi-agent-skill-distribution-design.md`. The task-by-task plan (with code blocks to paste) is at `docs/superpowers/plans/2026-04-22-multi-agent-skill-distribution.md`. The plan deliberately keeps Codex's `resolveTargetBase` simple (`<root>/.codex` for both scopes), so Codex output lands at `~/.codex/` or `./.codex/` — if you want AGENTS.md at the repo root for project scope, change `lib/paths.js` and the Codex renderer together.
 
-## Target architecture (per spec, not yet built)
+## Target architecture
 
 Single canonical source → per-agent renderer:
 
@@ -34,7 +33,7 @@ Single canonical source → per-agent renderer:
 | Claude | `~/.claude/skills/` | `.claude/skills/` |
 | Qwen | `~/.qwen/skills/` | `.qwen/skills/` |
 | Copilot | `~/.copilot/` (limited) | `.github/` (primary) |
-| Codex | `~/.codex/` | repo `AGENTS.md` + `prompts/` |
+| Codex | `~/.codex/` | `.codex/` (both scopes point into `.codex/`; renderer emits `AGENTS.md` + `prompts/<name>.md` inside) |
 
 The CLI must **fail explicitly** on unsupported `{agent, scope}` combinations — no silent fallbacks.
 

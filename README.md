@@ -1,6 +1,27 @@
 # matt-daily-skills
 
-Canonical multi-agent skill library installable via `npx`.
+Canonical multi-agent skill library for Claude Code, GitHub Copilot, Qwen Code, and Codex — installable via `npx`, zero runtime dependencies.
+
+## Requirements
+
+Node >=22.
+
+## Installation
+
+No global install required — run directly via `npx`:
+
+```bash
+npx github:meirongdev/matt-daily-skills <command>
+```
+
+Or install once globally:
+
+```bash
+npm install -g github:meirongdev/matt-daily-skills
+matt-daily-skills list
+```
+
+> **npx caching:** npx caches GitHub installs by ref. If a fresh install doesn't pick up recent changes, add `--yes` to bypass the cache, or bump `version` in `package.json` before pushing.
 
 ## Quick start
 
@@ -8,89 +29,22 @@ Canonical multi-agent skill library installable via `npx`.
 # See what's available
 npx github:meirongdev/matt-daily-skills list
 
-# Install one skill to ~/.claude/skills/
-npx github:meirongdev/matt-daily-skills install ecommerce-entry-review
+# Install one skill for Claude Code (user-level → ~/.claude/skills/)
+npx github:meirongdev/matt-daily-skills install ecommerce-entry-review --agent claude
 
-# Install into current project (./.claude/skills/)
-npx github:meirongdev/matt-daily-skills install ecommerce-entry-review --project
+# Install into the current project (./.claude/skills/)
+npx github:meirongdev/matt-daily-skills install ecommerce-entry-review --agent claude --project
 
-# Install everything (e.g. on a new machine)
-npx github:meirongdev/matt-daily-skills install --all
+# Install all skills for Copilot (project-level → .github/skills/)
+npx github:meirongdev/matt-daily-skills install --all --agent copilot --project
 
-# Overwrite existing
-npx github:meirongdev/matt-daily-skills install ecommerce-entry-review --force
-```
-
-> **npx caching**: npx caches GitHub installs by ref. If a fresh install doesn't pick up recent changes, bump `version` in `package.json`.
-
-## Repo structure
-
-```
-mat
-t-daily-skills/
-├── package.json                     # npm metadata; `bin` → bin/cli.js
-├── bin/
-│   └── cli.js                       # Entry point
-├── lib/
-│   └── cli.js                       # CLI implementation stub
-├── templates/
-│   └── skill/                       # Used by `new` command
-│       ├── SKILL.md
-│       └── manifest.json
-└── README.md
+# Overwrite an existing install
+npx github:meirongdev/matt-daily-skills install ecommerce-entry-review --agent claude --force
 ```
 
 ## Skills in this repo
 
 Run `npx github:meirongdev/matt-daily-skills list` for the live list.
-
-## Adding a new skill
-
-Two ways:
-
-### The fast way: scaffold from template
-
-```bash
-# Clone locally first (scaffolding needs a writable repo)
-git clone https://github.com/meirongdev/matt-daily-skills.git
-cd matt-daily-skills
-
-# Create a new skill from template
-node bin/cli.js new my-new-skill
-
-# Edit skills/my-new-skill/SKILL.md — especially the description (that's the trigger)
-# Add any reference files under skills/my-new-skill/references/
-
-# Test locally
-node bin/cli.js install my-new-skill --force
-
-# Commit and push
-git add . && git commit -m "Add my-new-skill" && git push
-```
-
-### The manual way
-
-Just drop a folder into `skills/<your-skill-name>/` with a valid `SKILL.md`. The CLI auto-discovers it — no registration needed.
-
-**What makes a valid `SKILL.md`?**
-
-```markdown
----
-name: your-skill-name
-description: Single-paragraph description. This is how Claude decides to trigger the skill, so be specific. Include trigger phrases (ideally in both languages). Under ~500 chars.
----
-
-# Your Skill Name
-
-## Process
-### Step 1: ...
-### Step 2: ...
-
-## Output format
-(What Claude should produce)
-```
-
-Frontmatter must have at least `name` and `description`.
 
 ## CLI reference
 
@@ -99,30 +53,149 @@ npx github:meirongdev/matt-daily-skills [command]
 
 Commands:
   list                          List all skills in this repo
-  install <n>                   Install a skill
+  install <skill>               Install a skill
   install --all                 Install every skill
-  new <n>                       Scaffold a new skill from template
+  new <skill>                   Scaffold a new skill from template
 
-Install flags:
-  -u, --user                    Install to ~/.claude/skills/ (default)
-  -p, --project                 Install to ./.claude/skills/
-  -t, --target <dir>            Install to a custom directory
+Required for install:
+  -a, --agent <agent>           Target agent: claude | copilot | qwen | codex
+
+Scope (install, optional):
+  -u, --user                    User-level install (default)
+  -p, --project                 Project-level install
+  -t, --target <dir>            Custom install directory
+
+Other:
   -f, --force                   Overwrite existing skill
 ```
 
-## Using with different agents
+## Agent install paths
 
-| Agent | Target path |
-|---|---|
-| **Claude Code** (user-level) | `~/.claude/skills/` — the default |
-| **Claude Code** (project) | `.claude/skills/` in project root — use `--project` |
-| **Other agents** | Use `--target <path>` for a custom install location |
+| Agent | User scope | Project scope |
+|---|---|---|
+| **Claude Code** | `~/.claude/skills/` | `.claude/skills/` |
+| **Qwen Code** | `~/.qwen/skills/` | `.qwen/skills/` |
+| **GitHub Copilot** | limited (`~/.copilot/`) | `.github/skills/` (primary) |
+| **Codex** | `~/.codex/` | `.codex/` |
+
+Each target is the install *base*; the per-agent renderer writes files beneath it (e.g. Codex writes `AGENTS.md` and `prompts/<skill>.md` inside the base; Copilot writes `skills/<skill>/` and `prompts/<skill>.prompt.md`). Unsupported `{agent, scope}` combinations fail explicitly — the CLI never silently falls back.
+
+> **Note on Codex project scope:** the current path resolver puts everything under `<cwd>/.codex/`. If you want `AGENTS.md` at the repo root (the real-world Codex convention), change `lib/paths.js` and `lib/renderers/codex.js` together — the design leaves this adjustable.
+
+## Repo structure
+
+```
+matt-daily-skills/
+├── bin/
+│   └── cli.js                       # Entry point — dispatches to lib/cli.js
+├── lib/
+│   ├── cli.js                       # Command parsing and orchestration
+│   ├── discover.js                  # Canonical skill discovery
+│   ├── frontmatter.js               # Flat frontmatter parser
+│   ├── manifest.js                  # Manifest loading and validation
+│   ├── paths.js                     # {agent, scope} → target path resolver
+│   ├── install.js                   # Install orchestration
+│   └── renderers/
+│       ├── claude.js                # Claude/Qwen direct install
+│       ├── copilot.js               # Copilot compatibility export
+│       └── codex.js                 # Codex compatibility export
+├── skills/
+│   └── <skill>/
+│       ├── SKILL.md                 # Canonical instruction source
+│       ├── manifest.json            # Enabled agents and render mode
+│       └── references/              # Optional long-form supporting material
+├── templates/
+│   └── skill/                       # Source for `new` command scaffolding
+│       ├── SKILL.md
+│       └── manifest.json
+├── tests/                           # node --test suite
+├── README.md
+└── package.json
+```
+
+## Adding a new skill
+
+### Scaffold from template
+
+```bash
+git clone https://github.com/meirongdev/matt-daily-skills.git
+cd matt-daily-skills
+
+node bin/cli.js new my-new-skill
+
+# Edit the generated files:
+#   skills/my-new-skill/SKILL.md       ← description is the trigger
+#   skills/my-new-skill/manifest.json  ← enable/disable per agent
+
+# Test locally
+node bin/cli.js install my-new-skill --agent claude --force
+
+git add . && git commit -m "Add my-new-skill" && git push
+```
+
+### Manual drop-in
+
+Create `skills/<your-skill-name>/` with the two required files. The CLI auto-discovers it — no registration needed.
+
+**`SKILL.md`** (frontmatter must be flat — no YAML nesting or arrays):
+
+```markdown
+---
+name: your-skill-name
+description: One paragraph describing when this skill should trigger and what it does.
+  Include trigger phrases in English and Chinese where relevant. Under ~500 chars.
+---
+
+# Your Skill Name
+
+## When to use
+- ...
+
+## When NOT to use
+- Not for: ...
+
+## Process
+### Step 1: ...
+### Step 2: ...
+
+## Output format
+(What the model should produce)
+```
+
+**`manifest.json`:**
+
+```json
+{
+  "version": 1,
+  "agents": {
+    "claude":  { "enabled": true },
+    "qwen":    { "enabled": true },
+    "copilot": { "enabled": true, "mode": "skill-and-prompt" },
+    "codex":   { "enabled": true, "mode": "agents-and-prompts" }
+  }
+}
+```
+
+## Running tests
+
+```bash
+npm test
+# → node --test tests/*.test.js
+```
 
 ## Maintenance tips
 
-- **Bump the `version` in `package.json`** when you ship a material change. npx caches per version, so bumping ensures fresh installs.
-- **Keep each SKILL.md under ~500 lines.** Longer content goes in `references/` and is loaded only when needed.
-- **When editing a description**, remember it's the trigger. Make it specific so the skill actually fires when it should.
+- **Bump `version` in `package.json`** on every material change — npx caches by version.
+- **Keep `SKILL.md` under ~500 lines.** Longer content goes in `references/` and is loaded only when needed.
+- **`description` is the trigger.** Make it specific so the skill fires when it should and stays quiet when it shouldn't.
+- **Skill name must be lowercase kebab-case** (`^[a-z][a-z0-9-]*$`). Renaming breaks implicit trigger history and `/name` muscle memory.
+- **Frontmatter must stay flat** — the parser handles `key: value` plus continuation lines only; no YAML nesting, arrays, or complex quoting.
+
+## Architecture notes
+
+How skills go from `SKILL.md` to execution inside an agent: [`docs/skill-execution.md`](docs/skill-execution.md)
+
+Design rationale and full target architecture: [`docs/superpowers/specs/2026-04-22-multi-agent-skill-distribution-design.md`](docs/superpowers/specs/2026-04-22-multi-agent-skill-distribution-design.md)
 
 ## License
 

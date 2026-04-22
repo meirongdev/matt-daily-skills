@@ -32,11 +32,11 @@ Target path per `{agent, scope}`:
 | Claude Code | `~/.claude/skills/` | `<repo>/.claude/skills/` |
 | Qwen Code | `~/.qwen/skills/` | `<repo>/.qwen/skills/` |
 | GitHub Copilot | limited (`~/.copilot/`) | `<repo>/.github/` (primary) |
-| Codex | `~/.codex/` + `AGENTS.md` | `<repo>/AGENTS.md` + `.agents/skills/` |
+| Codex | `~/.codex/` (AGENTS.md + prompts/ inside) | `<repo>/.codex/` (same layout) — diverges from real Codex convention; see "Known follow-ups" |
 
 Unsupported `{agent, scope}` combinations fail explicitly — the CLI never silently falls back.
 
-Implementation status is tracked in `docs/superpowers/plans/2026-04-22-multi-agent-skill-distribution.md`. Current state is a stub; see the "Current status" section at the end.
+Implementation status is tracked in `docs/superpowers/plans/2026-04-22-multi-agent-skill-distribution.md`. See the "Current status" section at the end.
 
 ## Layer 2: Execution (each agent)
 
@@ -117,18 +117,17 @@ A few things follow directly from how execution works:
 
 Implemented:
 
-- Repo layout, package metadata, template scaffold under `templates/skill/`.
-- Design spec and task-by-task plan under `docs/superpowers/`.
+- Full distribution pipeline: `list`, `install`, `new`; flat frontmatter parser; canonical skill discovery; manifest validation; per-agent path resolver; renderers for Claude/Qwen/Copilot/Codex; install writer with overwrite protection.
+- Sample skill `ecommerce-entry-review` migrated under `skills/`.
+- 25 tests under `tests/` covering parsing, discovery, path resolution, renderer output shapes, install behaviour (including overwrite protection), and CLI scaffolding.
 - Zero runtime dependencies; Node >=22.
 
-Not yet implemented:
+Known follow-ups:
 
-- `lib/cli.js` is a stub (prints "not implemented yet" and returns).
-- `skills/` tree does not exist at repo root; the sample `ecommerce-entry-review` still lives at a legacy `mnt/...` path.
-- No discovery, manifest validation, path resolver, renderer, or install writer.
-- `tests/` directory does not exist; `npm test` runs successfully but finds zero tests.
+- Codex project-scope output currently lands under `<cwd>/.codex/AGENTS.md` because `resolveTargetBase` returns `<root>/.codex` for both scopes. Real-world Codex convention puts `AGENTS.md` at the repo root and skills under `.agents/skills/`. Adjust `lib/paths.js` and `lib/renderers/codex.js` together if you want to match that.
+- Copilot and Codex renderers do not yet export `references/` content — Claude/Qwen do.
 
-The plan's Tasks 1 through 6 build the distribution layer end-to-end. Tasks 7 and 8 close out documentation and smoke tests. The execution layer is always handled by the target agent and is never implemented inside this repo.
+The execution layer is always handled by the target agent and is never implemented inside this repo.
 
 ## Related docs
 
