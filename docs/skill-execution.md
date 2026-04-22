@@ -11,32 +11,21 @@ Two distinct systems are involved. Mixing them up is the most common source of c
 
 The two layers share no runtime code. Once files land on disk, the distribution side is done. Everything after that is the agent's job, and the behavior is defined by the agent vendor — not by this repo.
 
-## Layer 1: Distribution (this repo)
+## Layer 1: Distribution
 
-Input:
+This repo is a pure content library. Installation is delegated to [`vercel-labs/skills`](https://github.com/vercel-labs/skills), a universal installer:
 
-- `skills/<name>/SKILL.md` — canonical instruction source
-- `skills/<name>/manifest.json` — enabled agents + per-agent render mode
-- Optional `references/`, `scripts/` — supporting material
-
-Pipeline (per install):
-
-```
-discover → validate → pick renderer → resolve target path → write files
+```bash
+npx skills add meirongdev/matt-daily-skills           # interactive
+npx skills add meirongdev/matt-daily-skills -a claude-code -g -y   # direct
 ```
 
-Target path per `{agent, scope}`:
+Input expected by the installer:
 
-| Agent | User scope | Project scope |
-|---|---|---|
-| Claude Code | `~/.claude/skills/` | `<repo>/.claude/skills/` |
-| Qwen Code | `~/.qwen/skills/` | `<repo>/.qwen/skills/` |
-| GitHub Copilot | limited (`~/.copilot/`) | `<repo>/.github/` (primary) |
-| Codex | `~/.codex/` (AGENTS.md + prompts/ inside) | `<repo>/.codex/` (same layout) — diverges from real Codex convention; see "Known follow-ups" |
+- `skills/<name>/SKILL.md` — canonical instruction source, YAML frontmatter with `name` and `description`
+- Optional `references/`, `resources/`, or other subdirectories — ride along with the skill
 
-Unsupported `{agent, scope}` combinations fail explicitly — the CLI never silently falls back.
-
-Implementation status is tracked in `docs/superpowers/plans/2026-04-22-multi-agent-skill-distribution.md`. See the "Current status" section at the end.
+`vercel-labs/skills` maps the `--agent` flag to the agent's canonical discovery path (e.g. `claude-code` → `~/.claude/skills/` globally, `.claude/skills/` per-project) and either symlinks or copies the skill directory into place. See its README for the full 40+ agent table.
 
 ## Layer 2: Execution (each agent)
 
@@ -113,26 +102,10 @@ A few things follow directly from how execution works:
 - `## When NOT to use` belongs in every non-trivial skill. It costs one small section and actively reduces false positives.
 - Skill names must be lowercase kebab-case and stable — renaming breaks implicit trigger history and any explicit `/name` muscle memory.
 
-## Current status of this repo
-
-Implemented:
-
-- Full distribution pipeline: `list`, `install`, `new`; flat frontmatter parser; canonical skill discovery; manifest validation; per-agent path resolver; renderers for Claude/Qwen/Copilot/Codex; install writer with overwrite protection.
-- Sample skill `ecommerce-entry-review` migrated under `skills/`.
-- 25 tests under `tests/` covering parsing, discovery, path resolution, renderer output shapes, install behaviour (including overwrite protection), and CLI scaffolding.
-- Zero runtime dependencies; Node >=22.
-
-Known follow-ups:
-
-- Codex project-scope output currently lands under `<cwd>/.codex/AGENTS.md` because `resolveTargetBase` returns `<root>/.codex` for both scopes. Real-world Codex convention puts `AGENTS.md` at the repo root and skills under `.agents/skills/`. Adjust `lib/paths.js` and `lib/renderers/codex.js` together if you want to match that.
-- Copilot and Codex renderers do not yet export `references/` content — Claude/Qwen do.
-
 The execution layer is always handled by the target agent and is never implemented inside this repo.
 
 ## Related docs
 
-- `docs/superpowers/specs/2026-04-22-multi-agent-skill-distribution-design.md` — design this repo targets
-- `docs/superpowers/plans/2026-04-22-multi-agent-skill-distribution.md` — task-by-task plan
-- `CLAUDE.md` — short repo guidance for agents
-- `README.md` — user-facing install and usage guide
-- `templates/skill/SKILL.md` — default scaffold with `When to use` and `When NOT to use` sections
+- [`README.md`](../README.md) — user-facing install and usage guide
+- [`CLAUDE.md`](../CLAUDE.md) — short repo guidance for agents
+- [`vercel-labs/skills`](https://github.com/vercel-labs/skills) — installer CLI, full agent → path table

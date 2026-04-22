@@ -1,11 +1,5 @@
-# dependencies
-node_modules/
-
 # local worktrees (gitignored per CLAUDE.md)
 .worktrees/
-
-# test output
-coverage/
 
 # OS
 .DS_Store
