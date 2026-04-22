@@ -29,18 +29,38 @@ matt-daily-skills list
 # See what's available
 npx github:meirongdev/matt-daily-skills list
 
-# Install one skill for Claude Code (user-level → ~/.claude/skills/)
+# Claude Code — user-level (→ ~/.claude/skills/)
 npx github:meirongdev/matt-daily-skills install ecommerce-entry-review --agent claude
 
-# Install into the current project (./.claude/skills/)
+# Claude Code — project-level (→ ./.claude/skills/)
 npx github:meirongdev/matt-daily-skills install ecommerce-entry-review --agent claude --project
 
-# Install all skills for Copilot (project-level → .github/skills/)
-npx github:meirongdev/matt-daily-skills install --all --agent copilot --project
+# Qwen Code — user-level (→ ~/.qwen/skills/)
+npx github:meirongdev/matt-daily-skills install ecommerce-entry-review --agent qwen
 
-# Overwrite an existing install
-npx github:meirongdev/matt-daily-skills install ecommerce-entry-review --agent claude --force
+# GitHub Copilot — project-level (→ .github/skills/, primary target)
+npx github:meirongdev/matt-daily-skills install ecommerce-entry-review --agent copilot --project
+
+# Codex — user-level (→ ~/.codex/; writes AGENTS.md + prompts/<skill>.md)
+npx github:meirongdev/matt-daily-skills install ecommerce-entry-review --agent codex
+
+# Install all skills at once
+npx github:meirongdev/matt-daily-skills install --all --agent claude
 ```
+
+## Updating skills
+
+Re-run `install` with `--force` to overwrite an already-installed skill:
+
+```bash
+# Update one skill
+npx github:meirongdev/matt-daily-skills install ecommerce-entry-review --agent claude --force
+
+# Update all skills
+npx github:meirongdev/matt-daily-skills install --all --agent claude --force
+```
+
+Without `--force` the CLI will error if the target files already exist, so the flag is the intentional "I want to overwrite" signal.
 
 ## Skills in this repo
 
