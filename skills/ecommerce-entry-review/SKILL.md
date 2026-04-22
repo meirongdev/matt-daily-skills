@@ -21,6 +21,22 @@ The goal is **not** to produce an exhaustive list of flaws. A new hire who recei
 
 Follow these steps in order. Don't skip ahead.
 
+### Step 0: Check for a previous review
+
+Before doing anything else, look for previous review files in the directory where you're working:
+
+```
+ls reviews/review-*.md 2>/dev/null | sort | tail -1
+```
+
+If a previous review file exists:
+- Extract its `**Reviewed commit:**` line to get the prior commit hash.
+- Run `git log <prior_commit>..HEAD --oneline` to see what changed since then.
+- Note which top issues from the prior review are still open vs. likely addressed.
+- You will use this to produce a **Delta section** in Deliverable 1 (see Step 4).
+
+If no previous review exists, skip the delta section — this is the baseline review.
+
 ### Step 1: Get the bird's-eye view first
 
 Before opening individual files, answer these:
@@ -88,6 +104,20 @@ Use this exact structure:
 
 ## 详细反馈附录
 按文件/模块组织所有 minor / nitpick。可直接作为书面反馈发给新人。
+
+## 与上次 Review 的对比 (仅当存在上次 review 文件时)
+**上次 review commit**: `<prior_commit_hash>`
+**本次 review commit**: `<current_commit_hash>`
+**新增提交**: `git log <prior>..HEAD --oneline` 的结果摘要
+
+### 已改善
+- [上次的 issue 标题] — 具体哪里改了，改得怎么样
+
+### 仍然存在
+- [上次的 issue 标题] — 是否有进展？原因分析。
+
+### 新发现的问题
+- [新 issue] — 是否与新增代码相关，还是之前遗漏了
 ```
 
 #### Deliverable 2: 1-1 讨论指南
@@ -131,6 +161,34 @@ Use this exact structure:
 ```
 
 See `references/discussion-guide.md` for question templates (by review dimension) and facilitation tips — how to probe deeper, how to handle defensive or over-agreeable responses.
+
+### Step 5: Save the review to a dated file
+
+After producing both deliverables, write the review to a persistent file so future reviews can diff against it.
+
+1. Get the current HEAD commit: `git log -1 --format="%H %s"`
+2. Determine the save path: `reviews/review-YYYY-MM-DD.md` relative to the working directory. Create the `reviews/` directory if it doesn't exist.
+3. Write the file with this header followed by both deliverables:
+
+```
+---
+reviewed_commit: <full commit hash>
+reviewed_at: YYYY-MM-DD
+project: <project name>
+---
+
+**Reviewed commit:** `<full commit hash>` — <commit subject>
+
+[Deliverable 1 content here]
+
+---
+
+[Deliverable 2 content here]
+```
+
+4. Tell the user: `已保存 Review 至 reviews/review-YYYY-MM-DD.md（commit: <short hash>）。下次 review 时会自动与本次结果对比。`
+
+If the `reviews/` directory is inside the reviewed project's git repo, remind the user to add it to `.gitignore` if they don't want to commit mentor notes there, or commit it intentionally as a coaching artifact.
 
 ## Tone guidelines
 
