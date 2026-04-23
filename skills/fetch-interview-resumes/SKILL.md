@@ -34,7 +34,7 @@ chmod 600 ~/.config/matt-daily-skills/token.json
 
 The full walkthrough (including the reason `-s calendar,drive` shorthand doesn't work — it grants full scopes while the script refreshes with `.readonly`) lives in `references/auth-setup.md`. If `token.json` is missing or the refresh fails with `invalid_scope`, the script exits with a recovery command — direct the user to rerun the `gws auth login --scopes …` step.
 
-The script self-heals two known `gws` (≥ 0.22) quirks: a stdout log line written before the JSON, and missing `token_uri` / `scopes` fields. No manual post-processing of `token.json` is needed.
+The script self-heals one real `gws` quirk — `gws auth export` omits `token_uri` and `scopes`, both of which `google-auth` needs to refresh. Defaults are injected on first load. No manual post-processing of `token.json` is needed.
 
 **Python deps**:
 

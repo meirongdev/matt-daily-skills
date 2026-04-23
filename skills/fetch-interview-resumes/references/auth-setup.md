@@ -37,11 +37,9 @@ gws auth export --unmasked > ~/.config/matt-daily-skills/token.json
 chmod 600 ~/.config/matt-daily-skills/token.json
 ```
 
-> **Heads-up — two known `gws` (≥ 0.22) quirks the script silently heals**:
-> 1. `gws auth export --unmasked` prints `Using keyring backend: keyring` to **stdout** before the JSON, so the resulting `token.json` starts with a plain-text line and isn't strictly valid JSON.
-> 2. The exported JSON omits `token_uri` and `scopes` — both of which `google-auth` needs to refresh the token.
+> **Heads-up — `gws auth export` omits `token_uri` and `scopes`**, both of which `google-auth` needs to refresh the token. `fetch_resumes.py` injects defaults on first load (`token_uri = https://oauth2.googleapis.com/token`, scopes = the two readonly URIs from step 3) and rewrites `token.json` in canonical form. You can leave the file as-is after `gws auth export`.
 >
-> On first load `fetch_resumes.py` extracts the JSON block via regex, injects `token_uri = https://oauth2.googleapis.com/token` and the readonly scopes as defaults, and rewrites `token.json` in canonical form. You can leave the file as-is after `gws auth export`.
+> (gws does log a `Using keyring backend: keyring` line, but it goes to **stderr** — a plain `>` redirect will not put it in `token.json`. The script's JSON extractor is still tolerant of leading non-JSON text in case you accidentally merge stderr with `2>&1` during debugging.)
 
 Override the target directory via `MATT_SKILLS_CONFIG_DIR` if you want a different location.
 

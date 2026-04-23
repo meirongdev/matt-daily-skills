@@ -14,8 +14,10 @@ setup`, then grant the read-only scopes this script needs and export:
       https://www.googleapis.com/auth/drive.readonly
   gws auth export --unmasked > ~/.config/matt-daily-skills/token.json
 The refresh token inside token.json is reused on every subsequent run.
-(This script heals two known gws quirks at load time: a stdout log line
-before the JSON, and missing `token_uri` / `scopes` fields.)
+(`gws auth export` omits `token_uri` and `scopes` — this script injects
+defaults at load time and rewrites token.json in canonical form. The JSON
+extractor is also tolerant of any leading non-JSON text, in case stderr
+gets merged in by a shell redirect.)
 """
 from __future__ import annotations
 
@@ -151,9 +153,10 @@ def event_start_date(event: dict) -> str:
 def _read_token() -> dict:
     """Read TOKEN_FILE, tolerant of common gws quirks.
 
-    `gws auth export --unmasked` (≥ 0.22) writes a log line to stdout before
-    the JSON (breaking plain `>` redirect) and omits `token_uri` / `scopes`.
-    Extract the JSON block regardless of leading noise and inject defaults.
+    `gws auth export` omits `token_uri` and `scopes` — google-auth needs both
+    to refresh. Inject defaults if absent. Also extract the JSON block via
+    regex, so a token.json accidentally produced with stderr merged in (e.g.
+    `gws auth export --unmasked > token.json 2>&1`) still parses.
     """
     raw = TOKEN_FILE.read_text()
     m = re.search(r"\{.*\}", raw, re.DOTALL)
