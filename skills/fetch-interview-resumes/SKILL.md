@@ -1,28 +1,40 @@
 ---
 name: fetch-interview-resumes
-description: Use when the user wants to download interview candidate resumes that are linked (as Google Drive URLs) in the description of Google Calendar events, and drop them into the local `interviews/resumes/{be,sre,devops}/` layout that the `java-senior-interviewer` and `senior-ops-interviewer` skills read from. Routing is by role keyword in the event title (BE/Backend/Java → be; SRE → sre; DevOps → devops). Only PDFs are downloaded; Google Docs / images / other MIME types are skipped. Trigger phrases "同步面试简历", "下载面试简历", "从 calendar 同步简历", "拉一下这周的简历", "把日历里的简历下载到本地", "fetch interview resumes", "sync resumes from calendar", "download calendar resumes", "pull resumes from google calendar". Also invoke this before `java-senior-interviewer` / `senior-ops-interviewer` when the user hasn't yet pulled the resume locally.
+description: Use when the user wants to download interview candidate resumes that are linked (as Google Drive URLs) in the description of Google Calendar events OR attached to the events as calendar attachments, and drop them into the local `interviews/resumes/{be,sre,devops}/` layout that the `java-senior-interviewer` and `senior-ops-interviewer` skills read from. Routing is by role keyword in the event title (BE/Backend/Java → be; SRE → sre; DevOps → devops). Only PDFs are downloaded; Google Docs / images / other MIME types are skipped. Trigger phrases "同步面试简历", "下载面试简历", "从 calendar 同步简历", "拉一下这周的简历", "把日历里的简历下载到本地", "fetch interview resumes", "sync resumes from calendar", "download calendar resumes", "pull resumes from google calendar". Also invoke this before `java-senior-interviewer` / `senior-ops-interviewer` when the user hasn't yet pulled the resume locally.
 ---
 
 # Fetch Interview Resumes (Google Calendar → local)
 
-Download candidate resume PDFs that are linked in Google Calendar event descriptions, and place them under `interviews/resumes/<role>/` so the interviewer skills can find them.
+Download candidate resume PDFs that are linked in Google Calendar event descriptions or attached to the events, and place them under `interviews/resumes/<role>/` so the interviewer skills can find them.
 
 ## When to use
 
 - User has an upcoming interview and the recruiter / coordinator pasted a Drive link into the calendar event description.
+- User has an upcoming interview and the recruiter attached the PDF to the event (shows as a paperclip icon on the calendar entry).
 - User wants to batch-pull a week of upcoming interviews in one shot.
 - User is about to run `java-senior-interviewer` or `senior-ops-interviewer` and says "the resume is in the calendar event".
 
 ## When NOT to use
 
-- Resumes arrive as **Calendar attachments** (not description links). That's a different code path — tell the user the current script doesn't handle it.
 - Resumes arrive **only as email attachments**. That's a Gmail API path — out of scope.
 - The event description has a **Google Docs** link (not a PDF Drive file). The script skips non-PDF MIME types by design — tell the user to export to PDF first or share the link as a PDF.
 - User wants to download **one specific link** they already have. Don't invoke this skill — just `curl` or use `gdown` directly.
 
 ## Prerequisites
 
-**One-time auth setup via `gws`** — before the first run, install the [Google Workspace CLI](https://github.com/googleworkspace/cli) (`brew install googleworkspace-cli`), then run `gws auth setup && gws auth login -s calendar,drive && gws auth export --unmasked > ~/.config/matt-daily-skills/token.json`. The full walkthrough lives in `references/auth-setup.md`. If `token.json` is missing, the script exits with a pointer to that file — direct the user there.
+**One-time auth setup via `gws`** — before the first run, install the [Google Workspace CLI](https://github.com/googleworkspace/cli) (`brew install googleworkspace-cli`), run `gws auth setup`, then grant the readonly scopes the script needs and export the token:
+
+```bash
+gws auth login --scopes \
+  https://www.googleapis.com/auth/calendar.readonly,\
+  https://www.googleapis.com/auth/drive.readonly
+gws auth export --unmasked > ~/.config/matt-daily-skills/token.json
+chmod 600 ~/.config/matt-daily-skills/token.json
+```
+
+The full walkthrough (including the reason `-s calendar,drive` shorthand doesn't work — it grants full scopes while the script refreshes with `.readonly`) lives in `references/auth-setup.md`. If `token.json` is missing or the refresh fails with `invalid_scope`, the script exits with a recovery command — direct the user to rerun the `gws auth login --scopes …` step.
+
+The script self-heals two known `gws` (≥ 0.22) quirks: a stdout log line written before the JSON, and missing `token_uri` / `scopes` fields. No manual post-processing of `token.json` is needed.
 
 **Python deps**:
 
@@ -84,8 +96,8 @@ Those skills handle candidate picker + playbook generation.
 
 | Aspect | Behavior |
 |---|---|
-| Source | Google Calendar event descriptions (primary calendar by default) |
-| Link formats recognized | `drive.google.com/file/d/<ID>/...`, `drive.google.com/open?id=<ID>`, `drive.google.com/uc?id=<ID>` |
+| Source | Google Calendar event descriptions AND event attachments (primary calendar by default) |
+| Link formats recognized | Description text: `drive.google.com/file/d/<ID>/...`, `drive.google.com/open?id=<ID>`, `drive.google.com/uc?id=<ID>`. Attachments: any `event.attachments[]` where `mimeType == application/pdf` (uses `fileId` directly). |
 | MIME filter | `application/pdf` only; others logged and skipped |
 | Role routing | `\bsre\b` → sre; `\b(devops\|dev-ops)\b` → devops; `\b(be\|backend\|back-end\|java)\b` → be; else `unclassified` (all case-insensitive, ASCII word-boundary so CJK text adjacent to "BE" still matches) |
 | Filename | `<YYYYMMDD>_<candidate>.pdf`; collision → suffix `_<fileId[:8]>` |
@@ -101,3 +113,4 @@ Those skills handle candidate picker + playbook generation.
 - **Permission error on a specific fileId** → the user's Google account doesn't have read access to that Drive file. Log and continue; report the skipped fileId so the user can request access.
 - **Multiple PDF links in one event** → all are downloaded; collisions get the `_<fileId[:8]>` suffix. This usually means recruiter attached both resume + JD; the user may want to delete the JD.
 - **First run hangs at "Please visit this URL"** → the OAuth local-server flow needs an open browser. If the user is on a headless box, tell them to run it locally once (just to generate the token), then copy `~/.config/matt-daily-skills/token.json` to the server.
+- **`RefreshError: invalid_scope: Bad Request`** → the refresh token was granted scopes that don't match what the script asks for. Almost always: user ran `gws auth login -s calendar,drive` (grants full scopes) but the script refreshes with `.readonly`. Fix: re-run `gws auth login --scopes https://www.googleapis.com/auth/calendar.readonly,https://www.googleapis.com/auth/drive.readonly` then re-export.

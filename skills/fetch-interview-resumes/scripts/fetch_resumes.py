@@ -1,15 +1,21 @@
 #!/usr/bin/env python3
-"""Fetch interview resume PDFs linked in Google Calendar event descriptions.
+"""Fetch interview resume PDFs from Google Calendar events.
 
-Reads Calendar events in a time window, extracts Drive file URLs from each
-event's description, downloads only PDFs, and routes them into role-specific
-resume subdirs based on keywords in the event title (summary).
+Reads Calendar events in a time window, extracts Drive file IDs from each
+event's description links AND PDF attachments, downloads only PDFs, and
+routes them into role-specific resume subdirs based on keywords in the
+event title (summary).
 
 First-time setup: see references/auth-setup.md. Short version: install the
-Google Workspace CLI (`brew install googleworkspace-cli`) and run
-`gws auth setup && gws auth login -s calendar,drive &&
- gws auth export --unmasked > ~/.config/matt-daily-skills/token.json`.
+Google Workspace CLI (`brew install googleworkspace-cli`), run `gws auth
+setup`, then grant the read-only scopes this script needs and export:
+  gws auth login --scopes \
+      https://www.googleapis.com/auth/calendar.readonly,\
+      https://www.googleapis.com/auth/drive.readonly
+  gws auth export --unmasked > ~/.config/matt-daily-skills/token.json
 The refresh token inside token.json is reused on every subsequent run.
+(This script heals two known gws quirks at load time: a stdout log line
+before the JSON, and missing `token_uri` / `scopes` fields.)
 """
 from __future__ import annotations
 
@@ -105,6 +111,23 @@ def extract_drive_ids(text: str) -> list[str]:
     return ids
 
 
+def collect_drive_ids(event: dict) -> list[str]:
+    """Drive fileIds from both description links and PDF attachments, deduped."""
+    ids = extract_drive_ids(event.get("description", "") or "")
+    seen = set(ids)
+    for att in event.get("attachments", []) or []:
+        if (att.get("mimeType") or "").lower() != "application/pdf":
+            continue
+        fid = att.get("fileId")
+        if not fid:
+            url_ids = extract_drive_ids(att.get("fileUrl") or "")
+            fid = url_ids[0] if url_ids else None
+        if fid and fid not in seen:
+            seen.add(fid)
+            ids.append(fid)
+    return ids
+
+
 def guess_candidate_name(summary: str) -> str:
     s = re.sub(r"[\(（][^()（）]*[\)）]", " ", summary)
     s = NAME_NOISE_EN.sub(" ", s)
@@ -125,6 +148,35 @@ def event_start_date(event: dict) -> str:
     return raw[:10].replace("-", "") if raw else "nodate"
 
 
+def _read_token() -> dict:
+    """Read TOKEN_FILE, tolerant of common gws quirks.
+
+    `gws auth export --unmasked` (≥ 0.22) writes a log line to stdout before
+    the JSON (breaking plain `>` redirect) and omits `token_uri` / `scopes`.
+    Extract the JSON block regardless of leading noise and inject defaults.
+    """
+    raw = TOKEN_FILE.read_text()
+    m = re.search(r"\{.*\}", raw, re.DOTALL)
+    if not m:
+        sys.exit(
+            f"No JSON block found in {TOKEN_FILE}. "
+            "Re-run setup — see references/auth-setup.md"
+        )
+    data = json.loads(m.group(0))
+    data.setdefault("token_uri", "https://oauth2.googleapis.com/token")
+    data.setdefault("scopes", SCOPES)
+    return data
+
+
+_RELOGIN_HINT = (
+    "Re-run with read-only scopes:\n"
+    "  gws auth login --scopes "
+    "https://www.googleapis.com/auth/calendar.readonly,"
+    "https://www.googleapis.com/auth/drive.readonly\n"
+    "  gws auth export --unmasked > {token_file}"
+)
+
+
 def load_creds() -> Credentials:
     if not TOKEN_FILE.exists():
         sys.exit(
@@ -132,17 +184,32 @@ def load_creds() -> Credentials:
             "Run first-time setup — see "
             "skills/fetch-interview-resumes/references/auth-setup.md"
         )
-    creds = Credentials.from_authorized_user_file(str(TOKEN_FILE), SCOPES)
+    data = _read_token()
+    # If the file was noisy or missing fields, rewrite a canonical copy so
+    # subsequent runs and other tooling don't trip on the same quirks.
+    canonical = json.dumps(data, indent=2, ensure_ascii=False)
+    if canonical.strip() != TOKEN_FILE.read_text().strip():
+        TOKEN_FILE.write_text(canonical)
+        TOKEN_FILE.chmod(0o600)
+    creds = Credentials.from_authorized_user_info(data, SCOPES)
     if creds.valid:
         return creds
     if creds.expired and creds.refresh_token:
-        creds.refresh(Request())
+        try:
+            creds.refresh(Request())
+        except Exception as e:
+            sys.exit(
+                f"Token refresh failed: {e}\n"
+                "Usually the refresh token wasn't granted the scopes this "
+                "script needs (calendar.readonly + drive.readonly).\n"
+                + _RELOGIN_HINT.format(token_file=TOKEN_FILE)
+            )
         TOKEN_FILE.write_text(creds.to_json())
+        TOKEN_FILE.chmod(0o600)
         return creds
     sys.exit(
-        f"Token in {TOKEN_FILE} is invalid or not refreshable. Re-run:\n"
-        "  gws auth login -s calendar,drive\n"
-        f"  gws auth export --unmasked > {TOKEN_FILE}"
+        f"Token in {TOKEN_FILE} is invalid or not refreshable.\n"
+        + _RELOGIN_HINT.format(token_file=TOKEN_FILE)
     )
 
 
@@ -253,8 +320,7 @@ def main() -> int:
 
     for ev in events:
         summary = ev.get("summary", "") or ""
-        desc = ev.get("description", "") or ""
-        ids = extract_drive_ids(desc)
+        ids = collect_drive_ids(ev)
         if not ids:
             continue
         role = classify(summary)
