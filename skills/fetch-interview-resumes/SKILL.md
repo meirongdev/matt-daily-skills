@@ -48,7 +48,7 @@ pip install -r skills/fetch-interview-resumes/requirements.txt
 
 Ask the user (use `AskUserQuestion` if multiple are unclear):
 
-1. **Time window** — default `--days-back 3 --days-ahead 14`. Override if the user named a range.
+1. **Time window** — default `--days-back 0 --days-ahead 7` (upcoming week only). Override if the user named a range, e.g. "include the past few days" → `--days-back 3`.
 2. **Dest root** — default `interviews/resumes`. Only override if the user has a non-standard layout.
 
 No other input is needed.
@@ -58,9 +58,8 @@ No other input is needed.
 From the working directory where `interviews/` lives (or should live):
 
 ```bash
-python <repo>/skills/fetch-interview-resumes/scripts/fetch_resumes.py \
-  --days-back 3 \
-  --days-ahead 14
+python <repo>/skills/fetch-interview-resumes/scripts/fetch_resumes.py
+# equivalent to: --days-back 0 --days-ahead 7
 ```
 
 Useful flags:

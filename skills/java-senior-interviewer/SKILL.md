@@ -56,7 +56,7 @@ Gather **four** inputs before doing anything else. Use the `AskUserQuestion` too
 1. **Region (地区)** — `tw` (台湾) or `sg` (新加坡). Determines the archive location.
 2. **Level (级别)** — `engineer` (1–5 yrs; focus on implementation and core API) or `senior` (5+ yrs; focus on trade-offs and system design).
 3. **Interview date (面试日期)** — `YYYYMMDD` format, e.g. `20260425`. Determines the dated subfolder.
-4. **Resume file** — a `.pdf` / `.docx` / `.doc` / `.md` / `.txt` file, by default picked from `interviews/resumes/be/` (newest-first by mtime).
+4. **Resume file** — a `.pdf` / `.docx` / `.doc` / `.md` / `.txt` file, by default picked from `interviews/resumes/be/` (sorted by filename descending; the `YYYYMMDD` prefix puts the newest interview date first).
 
 If the user already specified some fields in the triggering prompt, skip only those.
 
@@ -68,13 +68,13 @@ If the user already specified some fields in the triggering prompt, skip only th
 
 **Phase 1**: call `AskUserQuestion` with three questions in one turn — region, level, date. Do not infer any of these from context.
 
-**Phase 2**: list the Java resume subdirectory sorted by mtime newest-first:
+**Phase 2**: list the Java resume subdirectory sorted by filename descending. `fetch-interview-resumes` names files `<YYYYMMDD>_<candidate>.pdf`, so lexical-desc puts the newest interview date first — and unlike mtime, re-downloads don't shuffle the order:
 
 ```bash
-ls -t interviews/resumes/be/
+ls -r interviews/resumes/be/
 ```
 
-Then call `AskUserQuestion` with **one** question whose options are the top 3 newest files + a "指定其他路径" fallback (the built-in "Other" choice covers free-text entry). If `interviews/resumes/be/` doesn't exist or is empty, skip the listing and ask the user to type a path directly.
+Then call `AskUserQuestion` with **one** question whose options are the top 3 files + a "指定其他路径" fallback (the built-in "Other" choice covers free-text entry). If `interviews/resumes/be/` doesn't exist or is empty, skip the listing and ask the user to type a path directly.
 
 **Do NOT skip Phase 1 to guess the resume choice** — scanning populates picker options, it does not replace user input.
 

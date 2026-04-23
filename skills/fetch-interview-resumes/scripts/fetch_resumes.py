@@ -292,8 +292,8 @@ def download_pdf(
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--days-back", type=int, default=3, help="Default: 3")
-    ap.add_argument("--days-ahead", type=int, default=14, help="Default: 14")
+    ap.add_argument("--days-back", type=int, default=0, help="Default: 0 (upcoming only)")
+    ap.add_argument("--days-ahead", type=int, default=7, help="Default: 7")
     ap.add_argument(
         "--dest-root",
         default="interviews/resumes",

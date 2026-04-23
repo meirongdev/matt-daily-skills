@@ -59,7 +59,7 @@ Gather **four** inputs before doing anything else:
 1. **Role (角色)** — `sre` or `devops`. Determines which angle doc to load AND which resume subdir to scan.
 2. **Region (地区)** — `tw` (台湾) or `sg` (新加坡). Determines the archive location.
 3. **Interview date (面试日期)** — `YYYYMMDD` format, e.g. `20260425`.
-4. **Resume file** — a `.pdf` / `.docx` / `.doc` / `.md` / `.txt` file, by default picked from `interviews/resumes/<role>/` (newest-first by mtime).
+4. **Resume file** — a `.pdf` / `.docx` / `.doc` / `.md` / `.txt` file, by default picked from `interviews/resumes/<role>/` (sorted by filename descending; the `YYYYMMDD` prefix puts the newest interview date first).
 
 If the user already specified some fields in the triggering prompt, skip only those.
 
@@ -74,13 +74,13 @@ If the user already specified some fields in the triggering prompt, skip only th
 2. Region (sg / tw)
 3. Date (today / tomorrow / next Monday / other)
 
-**Phase 2**: once role is known, list the role's resume subdirectory sorted by mtime newest-first:
+**Phase 2**: once role is known, list the role's resume subdirectory sorted by filename descending. `fetch-interview-resumes` names files `<YYYYMMDD>_<candidate>.pdf`, so lexical-desc puts the newest interview date first — and unlike mtime, re-downloads don't shuffle the order:
 
 ```bash
-ls -t interviews/resumes/<role>/
+ls -r interviews/resumes/<role>/
 ```
 
-Then call `AskUserQuestion` with **one** question whose options are the top 3 newest files + a "指定其他路径" fallback (the built-in "Other" choice covers free-text entry). If the subdir doesn't exist or is empty, skip the listing and ask the user to type a path directly.
+Then call `AskUserQuestion` with **one** question whose options are the top 3 files + a "指定其他路径" fallback (the built-in "Other" choice covers free-text entry). If the subdir doesn't exist or is empty, skip the listing and ask the user to type a path directly.
 
 **Do NOT scan the directory before the user has chosen a role** — there's no other signal to guess from.
 
