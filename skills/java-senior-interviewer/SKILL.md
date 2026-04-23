@@ -53,25 +53,25 @@ Gather **four** inputs before doing anything else. Use the `AskUserQuestion` too
 1. **Region (地区)** — `tw` (台湾) or `sg` (新加坡). Determines the archive location.
 2. **Level (级别)** — `engineer` (1–5 yrs; focus on implementation and core API) or `senior` (5+ yrs; focus on trade-offs and system design).
 3. **Interview date (面试日期)** — `YYYYMMDD` format, e.g. `20260425`. Determines the dated subfolder.
-4. **Resume file** — a `.pdf` / `.docx` / `.doc` / `.md` / `.txt` file under `interviews/resumes/`.
+4. **Resume file** — a `.pdf` / `.docx` / `.doc` / `.md` / `.txt` file path (typically under `interviews/resumes/`, but accept any path the user provides).
 
-If the user already specified some fields in the triggering prompt, skip those. If `interviews/resumes/` holds multiple files and no specific candidate was named, list them as choices inside the question.
+If the user already specified some fields in the triggering prompt, skip only those.
 
 ## Workflow
 
-### Step 0 — Gather interview context
+### Step 0 — Ask for the four inputs first
 
-Run `ls interviews/resumes/` first so you can offer the real filenames as choices in the question. Then call `AskUserQuestion` for whichever of the four inputs are still missing.
+**Do NOT scan `interviews/resumes/` or run any filesystem commands before asking.** The first action of this skill is to call `AskUserQuestion` for whichever of the four inputs are still missing.
+
+`AskUserQuestion` is a deferred tool — load its schema via `ToolSearch` with query `select:AskUserQuestion` before the first call.
+
+Only after the user answers, proceed to locate the resume. If the user's answer names a bare filename and the file isn't found, then (and only then) `ls interviews/resumes/` to recover and re-ask.
 
 Record the candidate's **display name** — the resume filename without extension, preserving original spelling, spacing, and Chinese characters (e.g. `Tai Yew Mun`, `吴沁豫 (Caitlyn Wu)`, `Jeffrey（Zhi Ye）`). You will reuse this verbatim in Step 6.
 
-### Step 1 — Locate the resume
+### Step 1 — Verify the resume path
 
-```bash
-ls interviews/resumes/
-```
-
-If the directory doesn't exist or the expected file isn't there, stop and ask the user where the resume actually lives. Don't guess a path.
+Verify the file the user named exists (e.g. `ls <path>` or `test -f <path>`). Only if it's missing, fall back to `ls interviews/resumes/` to show available files and ask the user to pick one. Don't guess a path.
 
 ### Step 2 — Extract the resume to Markdown
 
