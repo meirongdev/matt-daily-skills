@@ -22,7 +22,7 @@ Download candidate resume PDFs that are linked in Google Calendar event descript
 
 ## Prerequisites
 
-**One-time OAuth setup** — before the first run, the user must create a GCP project, enable the Calendar + Drive APIs, create a Desktop OAuth client, and drop `credentials.json` into `~/.config/matt-daily-skills/`. The full walkthrough lives in `references/oauth-setup.md`. If `credentials.json` is missing, the script exits with a pointer to that file — direct the user there.
+**One-time auth setup via `gws`** — before the first run, install the [Google Workspace CLI](https://github.com/googleworkspace/cli) (`brew install googleworkspace-cli`), then run `gws auth setup && gws auth login -s calendar,drive && gws auth export --unmasked > ~/.config/matt-daily-skills/token.json`. The full walkthrough lives in `references/auth-setup.md`. If `token.json` is missing, the script exits with a pointer to that file — direct the user there.
 
 **Python deps**:
 

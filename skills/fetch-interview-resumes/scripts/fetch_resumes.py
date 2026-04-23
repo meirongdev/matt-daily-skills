@@ -5,9 +5,11 @@ Reads Calendar events in a time window, extracts Drive file URLs from each
 event's description, downloads only PDFs, and routes them into role-specific
 resume subdirs based on keywords in the event title (summary).
 
-First-time setup: see references/oauth-setup.md for GCP project + OAuth
-Desktop client creation. After the one-time browser consent, the refresh
-token is cached so subsequent runs are non-interactive.
+First-time setup: see references/auth-setup.md. Short version: install the
+Google Workspace CLI (`brew install googleworkspace-cli`) and run
+`gws auth setup && gws auth login -s calendar,drive &&
+ gws auth export --unmasked > ~/.config/matt-daily-skills/token.json`.
+The refresh token inside token.json is reused on every subsequent run.
 """
 from __future__ import annotations
 
@@ -25,7 +27,6 @@ from typing import Optional
 try:
     from google.auth.transport.requests import Request
     from google.oauth2.credentials import Credentials
-    from google_auth_oauthlib.flow import InstalledAppFlow
     from googleapiclient.discovery import build
     from googleapiclient.errors import HttpError
     from googleapiclient.http import MediaIoBaseDownload
@@ -48,7 +49,6 @@ CONFIG_DIR = Path(
         str(Path.home() / ".config" / "matt-daily-skills"),
     )
 )
-CRED_FILE = CONFIG_DIR / "credentials.json"
 TOKEN_FILE = CONFIG_DIR / "token.json"
 MANIFEST_FILE = CONFIG_DIR / "fetch_manifest.json"
 
@@ -126,26 +126,24 @@ def event_start_date(event: dict) -> str:
 
 
 def load_creds() -> Credentials:
-    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    creds: Optional[Credentials] = None
-    if TOKEN_FILE.exists():
-        creds = Credentials.from_authorized_user_file(str(TOKEN_FILE), SCOPES)
-    if creds and creds.valid:
+    if not TOKEN_FILE.exists():
+        sys.exit(
+            f"Token file not found: {TOKEN_FILE}\n"
+            "Run first-time setup — see "
+            "skills/fetch-interview-resumes/references/auth-setup.md"
+        )
+    creds = Credentials.from_authorized_user_file(str(TOKEN_FILE), SCOPES)
+    if creds.valid:
         return creds
-    if creds and creds.expired and creds.refresh_token:
+    if creds.expired and creds.refresh_token:
         creds.refresh(Request())
         TOKEN_FILE.write_text(creds.to_json())
         return creds
-    if not CRED_FILE.exists():
-        sys.exit(
-            f"OAuth client file not found: {CRED_FILE}\n"
-            "Follow skills/fetch-interview-resumes/references/oauth-setup.md "
-            "to create it."
-        )
-    flow = InstalledAppFlow.from_client_secrets_file(str(CRED_FILE), SCOPES)
-    creds = flow.run_local_server(port=0)
-    TOKEN_FILE.write_text(creds.to_json())
-    return creds
+    sys.exit(
+        f"Token in {TOKEN_FILE} is invalid or not refreshable. Re-run:\n"
+        "  gws auth login -s calendar,drive\n"
+        f"  gws auth export --unmasked > {TOKEN_FILE}"
+    )
 
 
 def load_manifest() -> dict[str, str]:
