@@ -18,6 +18,8 @@ npx skills add meirongdev/matt-daily-skills -g -a claude-code -s ecommerce-entry
 npx skills add meirongdev/matt-daily-skills --skill '*' -a claude-code -g -y
 ```
 
+> `owner/repo` shorthand and the full `https://github.com/...` URL are both accepted. If `npx skills add ...` ever fails with `Unknown command: add`, an older `skills` binary on PATH is shadowing the npm package — run `npm uninstall -g matt-daily-skills` (or `which skills` to find the offender).
+
 Default install method is symlink — skills update in place when you run `npx skills update`. Pass `--copy` if symlinks aren't supported on your system.
 
 ## Installation scope
@@ -42,6 +44,7 @@ npx skills update ecommerce-entry-review
 ## Skills in this repo
 
 - **`ecommerce-entry-review`** — reviews e-commerce product entry drafts against stored style/quality rules and emits a diff.
+- **`java-senior-interviewer`** — given a Java backend resume and target level, produces a candidate persona and a 60-minute interview playbook focused on separating tutorial knowledge from production experience.
 
 Run `npx skills add meirongdev/matt-daily-skills --list` for the live list.
 
