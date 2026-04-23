@@ -37,7 +37,10 @@ Run this skill from a working directory containing:
 
 ```
 interviews/
-├── resumes/          # INPUT: raw candidate resumes (.pdf / .docx / .doc / .md / .txt)
+├── resumes/          # INPUT root
+│   ├── be/           #   → this skill reads from here (Java backend)
+│   ├── sre/          #   → senior-ops-interviewer reads from here
+│   └── devops/       #   → senior-ops-interviewer reads from here
 ├── sg/               # OUTPUT archive root for 新加坡
 │   └── be/           #   → sg/be/<YYYYMMDD>/<Candidate Name>.md
 └── tw/               # OUTPUT archive root for 台湾
@@ -53,25 +56,33 @@ Gather **four** inputs before doing anything else. Use the `AskUserQuestion` too
 1. **Region (地区)** — `tw` (台湾) or `sg` (新加坡). Determines the archive location.
 2. **Level (级别)** — `engineer` (1–5 yrs; focus on implementation and core API) or `senior` (5+ yrs; focus on trade-offs and system design).
 3. **Interview date (面试日期)** — `YYYYMMDD` format, e.g. `20260425`. Determines the dated subfolder.
-4. **Resume file** — a `.pdf` / `.docx` / `.doc` / `.md` / `.txt` file path (typically under `interviews/resumes/`, but accept any path the user provides).
+4. **Resume file** — a `.pdf` / `.docx` / `.doc` / `.md` / `.txt` file, by default picked from `interviews/resumes/be/` (newest-first by mtime).
 
 If the user already specified some fields in the triggering prompt, skip only those.
 
 ## Workflow
 
-### Step 0 — Ask for the four inputs first
-
-**Do NOT scan `interviews/resumes/` or run any filesystem commands before asking.** The first action of this skill is to call `AskUserQuestion` for whichever of the four inputs are still missing.
+### Step 0 — Ask for the four inputs (two phases)
 
 `AskUserQuestion` is a deferred tool — load its schema via `ToolSearch` with query `select:AskUserQuestion` before the first call.
 
-Only after the user answers, proceed to locate the resume. If the user's answer names a bare filename and the file isn't found, then (and only then) `ls interviews/resumes/` to recover and re-ask.
+**Phase 1**: call `AskUserQuestion` with three questions in one turn — region, level, date. Do not infer any of these from context.
+
+**Phase 2**: list the Java resume subdirectory sorted by mtime newest-first:
+
+```bash
+ls -t interviews/resumes/be/
+```
+
+Then call `AskUserQuestion` with **one** question whose options are the top 3 newest files + a "指定其他路径" fallback (the built-in "Other" choice covers free-text entry). If `interviews/resumes/be/` doesn't exist or is empty, skip the listing and ask the user to type a path directly.
+
+**Do NOT skip Phase 1 to guess the resume choice** — scanning populates picker options, it does not replace user input.
 
 Record the candidate's **display name** — the resume filename without extension, preserving original spelling, spacing, and Chinese characters (e.g. `Tai Yew Mun`, `吴沁豫 (Caitlyn Wu)`, `Jeffrey（Zhi Ye）`). You will reuse this verbatim in Step 6.
 
 ### Step 1 — Verify the resume path
 
-Verify the file the user named exists (e.g. `ls <path>` or `test -f <path>`). Only if it's missing, fall back to `ls interviews/resumes/` to show available files and ask the user to pick one. Don't guess a path.
+Verify the file the user named exists (e.g. `test -f <path>`). Only if missing, fall back to `ls interviews/resumes/be/` to show available files and ask the user to pick one. Don't guess a path.
 
 ### Step 2 — Extract the resume to Markdown
 
@@ -79,7 +90,7 @@ Run the skill's extractor (path is relative to this skill's directory):
 
 ```bash
 python scripts/analyze_resume.py \
-  interviews/resumes/<resume-file> \
+  <resume-path> \
   --level {engineer|senior} \
   --extract-only \
   -o /tmp/<candidate>.resume.md

@@ -45,6 +45,7 @@ npx skills update ecommerce-entry-review
 
 - **`ecommerce-entry-review`** — reviews e-commerce product entry drafts against stored style/quality rules and emits a diff.
 - **`java-senior-interviewer`** — given a Java backend resume and target level, produces a candidate persona and a 60-minute interview playbook focused on separating tutorial knowledge from production experience.
+- **`senior-ops-interviewer`** — given an SRE or DevOps resume (role chosen at Step 0), produces a senior-level persona and 60-minute playbook. Stack: K8s / Helm / ArgoCD / Jenkins / Karpenter / Cloudflare / Ansible / Terraform / AWS. SRE lens focuses on SLO/incident/capacity; DevOps lens focuses on pipeline/IaC/GitOps.
 
 Run `npx skills add meirongdev/matt-daily-skills --list` for the live list.
 
