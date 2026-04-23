@@ -78,7 +78,7 @@ Then call `AskUserQuestion` with **one** question whose options are the top 3 ne
 
 **Do NOT skip Phase 1 to guess the resume choice** — scanning populates picker options, it does not replace user input.
 
-Record the candidate's **display name** — the resume filename without extension, preserving original spelling, spacing, and Chinese characters (e.g. `Tai Yew Mun`, `吴沁豫 (Caitlyn Wu)`, `Jeffrey（Zhi Ye）`). You will reuse this verbatim in Step 6.
+Record the candidate's **display name** — the resume filename without extension, preserving original spelling, spacing, and Chinese characters (e.g. `Jane Doe`, `张三 (Zhang San)`, `李四（Li Si）`). You will reuse this verbatim in Step 6.
 
 ### Step 1 — Verify the resume path
 
@@ -153,8 +153,8 @@ Where:
 
 Examples:
 
-- `interviews/tw/be/20260425/吴沁豫 (Caitlyn Wu).md`
-- `interviews/sg/be/20260425/Tai Yew Mun.md`
+- `interviews/tw/be/20260425/张三 (Zhang San).md`
+- `interviews/sg/be/20260425/Jane Doe.md`
 
 Create any missing intermediate directories (`mkdir -p` semantics). If the target file already exists, **do not overwrite** — append a versioned suffix: `<display-name>-v2.md`, `-v3.md`, and so on. A second review pass is valuable context and shouldn't clobber the first.
 

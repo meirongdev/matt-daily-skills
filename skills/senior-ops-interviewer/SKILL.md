@@ -84,7 +84,7 @@ Then call `AskUserQuestion` with **one** question whose options are the top 3 ne
 
 **Do NOT scan the directory before the user has chosen a role** — there's no other signal to guess from.
 
-Record the candidate's **display name** — the resume filename without extension, preserving original spelling, spacing, and Chinese characters (e.g. `Wei Chen (陈维)`, `Tai Yew Mun`, `吴韦德`). You will reuse this verbatim in Step 6.
+Record the candidate's **display name** — the resume filename without extension, preserving original spelling, spacing, and Chinese characters (e.g. `Zhang San (张三)`, `Jane Doe`, `王五`). You will reuse this verbatim in Step 6.
 
 ### Step 1 — Verify the resume path
 
@@ -150,8 +150,8 @@ interviews/<region>/<role>/<date>/<display-name>.md
 
 Examples:
 
-- `interviews/sg/sre/20260425/Tai Yew Mun.md`
-- `interviews/tw/devops/20260425/吴韦德.md`
+- `interviews/sg/sre/20260425/Jane Doe.md`
+- `interviews/tw/devops/20260425/王五.md`
 
 Create any missing intermediate directories (`mkdir -p` semantics). If the target file already exists, **do not overwrite** — append a versioned suffix: `<display-name>-v2.md`, `-v3.md`, and so on.
 
